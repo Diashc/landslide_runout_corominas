@@ -1,0 +1,14 @@
+Landslide_type,Path,N,A,B,CL,R2
+Rockfalls,All,47,0.21,-0.109,0.253,0.76
+Rockfalls,Obstructed,16,0.231,-0.091,0.103,0.83
+Rockfalls,Deflected,6,1.078,-0.233,0.413,0.85
+Rockfalls,Unobstructed,14,0.167,-0.119,0.309,0.92
+Translational slides,All,69,-0.159,-0.068,0.435,0.67
+Translational slides,Obstructed,23,-0.133,-0.057,0.382,0.76
+Translational slides,Unobstructed,42,-0.143,-0.08,0.433,0.8
+Debris flows,All,71,-0.012,-0.105,0.386,0.76
+Debris flows,Obstructed,18,-0.031,-0.102,0.358,0.87
+Debris flows,Channelized,19,-0.077,-0.109,0.467,0.69
+Debris flows,Unobstructed,29,-0.049,-0.108,0.27,0.85
+Earthflows and mudslides,All,17,-0.214,-0.07,0.512,0.65
+Earthflows and mudslides,Unobstructed,8,-0.22,-0.138,0.408,0.91
