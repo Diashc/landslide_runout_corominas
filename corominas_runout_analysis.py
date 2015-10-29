@@ -1,3 +1,25 @@
+##    corominas_runout_analysis - landslide runout analysis based on Corominas (1996)
+##    Copyright (C) 2015  Ricarido M. Saturay, Jr.
+##
+##    This program is free software: you can redistribute it and/or modify
+##    it under the terms of the GNU General Public License as published by
+##    the Free Software Foundation, either version 3 of the License, or
+##    (at your option) any later version.
+##
+##    This program is distributed in the hope that it will be useful,
+##    but WITHOUT ANY WARRANTY; without even the implied warranty of
+##    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##    GNU General Public License for more details.
+##
+##    You should have received a copy of the GNU General Public License
+##    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+print "corominas_runout_analysis.  Copyright (C) 2015  Ricarido M. Saturay, Jr."
+print "This program comes with ABSOLUTELY NO WARRANTY <http://www.gnu.org/licenses/>;"
+print "This is free software, and you are welcome to redistribute it\nunder certain conditions - see <http://www.gnu.org/licenses/>.\n\n\n"
+
+
+
 #modules and library
 import pandas as pd
 import numpy as np
@@ -48,7 +70,7 @@ def plot_HoL_vs_V(V,A,B,CL,LT_P):
 def user_input():#USER INPUTS
     while 1==1:
         try:
-            s = raw_input("Input landslide type-path  (separate with comma): ")
+            s = raw_input("Input number corresponding to landslide type-path  (separate with comma): ")
             ltp_id = map(int, s.split(','))
             all(isinstance(a, int) for a in ltp_id)
             all(0 <= a < len(df) for a in ltp_id)
@@ -99,10 +121,9 @@ def user_input():#USER INPUTS
     
 
     
-    
-
+pd.options.display.show_dimensions=False    
 df=pd.read_csv('Corominas1996_table1.csv',header=0)
-print df
+print df[['Landslide_type','Path']],'\n\n'
 ltp_id, thickness , area, Elev, Base=user_input()
 volume=thickness*area
 
@@ -124,10 +145,9 @@ for i in ltp_id:
     
     #plotting runout profile for current landslide type - path
     #logHoL,logHoL_lb=compute_HoL(volume,A,B,CL)
-    print i
-    print A,B,CL
-    print Elev/10**logHoL
-    print Elev/10**logHoL_lb
+    print '\n',Ls+' - '+Path
+    print '     nearest exposure:               ',str(int(round(Base)))+' m\n'
+    
 
     #plotting runout profile for current landslide type - path
 
@@ -137,7 +157,7 @@ for i in ltp_id:
         plt.sca(ax2[v_i])
         ax=plt.gca()
 
-       
+        print '     v='+str(int(round(volume[v_i],0)))+' m^3, t='+str(thickness[v_i])+' m'
 
 
         #plotting runout profiles (95%, upper)
@@ -145,14 +165,17 @@ for i in ltp_id:
         maxL=Elev/10**logHoL_lb[v_i]
         ax.add_patch(patches.Rectangle((0, 0), maxL, 0.1*Elev, fc='r',lw=0,alpha=0.3,label=('maximum extent (95%='+str(int(round(maxL)))+' $m$)')))
         ax.plot([0,maxL],[Elev,0], 'b:')
-        
+       
 
         #plotting runout profiles (mean)
         H=10**logHoL[v_i]*np.array([0,Base])+Elev
         meanL=Elev/10**logHoL[v_i]
         ax.add_patch(patches.Rectangle((0, 0), meanL, 0.2*Elev, fc='r',lw=0,label=('most likely extent (mean='+str(int(round(meanL)))+' $m$)')))
         plt.plot([0,meanL],[Elev,0], 'b-')
-       
+        print '         most probable extent (mean):    '+str(int(round(meanL)))+' m'
+        print '         maximum extent (95%):           '+str(int(round(maxL)))+' m\n'
+        
+        
         #plotting scarp-exposure profile
         ax.plot([0,Base],[Elev,0],'k--',lw=3)
         ax.plot([0,0,maxL],[Elev,0,0],'k-')
