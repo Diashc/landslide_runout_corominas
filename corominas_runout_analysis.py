@@ -40,6 +40,75 @@ def compute_HoL(V,A,B,CL):
     
     return logHoL, logHoL_lb
 
+def compute_critical_volume(A,B,CL,LT_P,Elev,Base,minV,min_t,max_t,area,max_Lot):
+    #HoL from regression line
+    Vmean=10**((np.log10(Elev/Base)-A)/B)
+
+    #HoL from lower bound 95% confidence interval
+    V95=10**((np.log10(Elev/Base)-A+CL)/B)
+
+    #setting volumes to minimum value if less than the minimum value
+    if Vmean<minV:Vmean=minV
+    if V95<minV:V95=minV
+
+    ct_ml=np.round(Vmean/area,1)
+    if ct_ml<0.1:ct_ml=0.1
+    ct_mx=np.round(V95/area,1)
+    if ct_mx<0.1:ct_mx=0.1
+
+    cA_ml=np.round(Vmean/max_t,1)
+    cA_mx=np.round(V95/max_t,1)
+    if cA_mx<10:cA_mx=10
+    if cA_ml<10:cA_ml=10
+
+   
+
+
+    print "\nCritical thickness (at constant area) to reach most likely runout= ",ct_ml," m"
+    print "Critical thickness (at constant area) to reach maximum runout= ",ct_mx," m\n"
+
+    print "Critical area (at maximum thickness) to reach most likely runout= ",cA_ml," m"
+    print "Critical area (at maximum thickness) to reach maximum runout= ",cA_mx," m\n"
+    
+    plt.figure(figsize=(6,4))
+
+    t_ml=np.linspace(ct_ml,max_t,100)
+    A_ml=Vmean/t_ml
+
+    t_mx=np.linspace(ct_mx,max_t,100)
+    A_mx=V95/t_mx
+
+
+
+    sA=np.linspace(1,max(A_ml),50)
+    
+    sV=sA**1.45
+    BsT_min=sA**0.3
+    BsT_max=sA**0.6
+    
+    SsT_min=sA**0.1
+    SsT_max=sA**0.4
+  
+    
+    plt.title(LT_P+'\nCritical thickness and area for runout to exposure', fontsize='small')
+##    plt.plot([ct_ml,max_t],[area,cA_ml],'r-',label='most likely runout')
+##    plt.plot([ct_mx,max_t],[area,cA_mx],'r--',label='maximum runout')
+    plt.plot(t_ml,A_ml,'r-',label='most likely runout')
+    plt.plot(t_mx,A_mx,'r--',label='maximum runout')
+    plt.plot(BsT_min,sA,'g-',label='bedrock failures')
+    plt.plot(BsT_max,sA,'g-')
+    plt.plot(SsT_min,sA,'b-',label='soil failures')
+    plt.plot(SsT_max,sA,'b-')
+    
+    plt.xlabel('thickness, $m$')
+    plt.ylabel('area, $m^2$')
+    plt.loglog()
+    plt.legend(fontsize='x-small')
+    
+    
+    return Vmean, V95
+    
+
 def plot_HoL_vs_V(V,A,B,CL,LT_P):
     #A,B,CL regression parameters (intercept, slope, 95% confidence limit) from Corominas 1996, Table 1
     #V landslide volume in m^3
@@ -70,34 +139,62 @@ def plot_HoL_vs_V(V,A,B,CL,LT_P):
 def user_input():#USER INPUTS
     while 1==1:
         try:
-            s = raw_input("Input number corresponding to landslide type-path  (separate with comma): ")
+            s = raw_input("Select numbers corresponding to landslide type-path  (separate with comma): ")
             ltp_id = map(int, s.split(','))
             all(isinstance(a, int) for a in ltp_id)
             all(0 <= a < len(df) for a in ltp_id)
+            try:
+                len(ltp_id)
+            except:
+                print "     Err: Select at least two landslide type-paths.\n"
+                continue
             break
         except:
             continue
         
     while 1==1:
         try:
-            s = raw_input("Input values of mean thickness of landslide (separate with comma): ")
+            s = raw_input("Input minimum landslide volume: ")
+            minvolume = float(s)
+            break
+        except:
+            print "     Err: Input a positive value.\n"
+                
+            continue
+
+
+    while 1==1:
+        try:
+            s = raw_input("Input minimum and maximum (and intermediate) values of mean thickness of landslide (separate with comma): ")
             thickness = map(float, s.split(','))
             all(isinstance(a, float) for a in thickness)
             try:
                 len(thickness)
-                thickness=np.array(thickness)
+                thickness=np.sort(np.array(thickness))
+                min(thickness)!=max(thickness)
             except:
-                break
+                print "     Err: Input at least two unequal values.\n"
+                continue
             break
         except:
             continue
 
     while 1==1:
         try:
-            s = raw_input("Input landslide area: ")
+            s = raw_input("Input landslide planimetric area (m^3): ")
             area = float(s)
             break
         except:
+            print "     Err: Input a positive number.\n"
+            continue
+
+    while 1==1:
+        try:
+            s = raw_input("Input maximum length-to-thickness ratio of landslide: ")
+            max_Lot = float(s)
+            break
+        except:
+            print "     Err: Input a positive number.\n"
             continue
 
     while 1==1:
@@ -106,17 +203,19 @@ def user_input():#USER INPUTS
             Elev = float(s)
             break
         except:
+            print "     Err: Input a positive number.\n"
             continue
-
+            
     while 1==1:
         try:
             s = raw_input("Horizontal distance from scarp to exposure, in meters: ")
             Base = float(s)
             break
         except:
+            print "     Err: Input a positive number.\n"
             continue
 
-    return ltp_id, thickness , area, Elev, Base   
+    return ltp_id, minvolume, thickness , area, max_Lot, Elev, Base   
     
     
 
@@ -124,13 +223,14 @@ def user_input():#USER INPUTS
 pd.options.display.show_dimensions=False    
 df=pd.read_csv('Corominas1996_table1.csv',header=0)
 print df[['Landslide_type','Path']],'\n\n'
-ltp_id, thickness , area, Elev, Base=user_input()
+ltp_id, min_V,thickness , area, max_Lot,Elev, Base=user_input()
+min_t=min(thickness)
+max_t=max(thickness)
+
+
 volume=thickness*area
 
-
 fig1,ax1=plt.subplots(ncols=len(ltp_id),sharex=True,sharey=True,figsize=(len(ltp_id*3),4))
-
-
 ax1_in=0
 for i in ltp_id:   
     
@@ -194,9 +294,13 @@ for i in ltp_id:
     fig2.tight_layout()
     plt.subplots_adjust(top=0.9)
     fig2.suptitle(Ls+' - '+Path)
+
+    compute_critical_volume(A,B,CL,Ls+' - '+Path,Elev,Base,min_V,min_t,max_t,area,max_Lot)
     
    
 fig1.tight_layout()
+
+
 
 plt.show()
         
