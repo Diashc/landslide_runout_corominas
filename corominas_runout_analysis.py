@@ -25,6 +25,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from math import log10, floor
 
 
 #functions
@@ -40,37 +41,43 @@ def compute_HoL(V,A,B,CL):
     
     return logHoL, logHoL_lb
 
-def compute_critical_volume(A,B,CL,LT_P,Elev,Base,minV,min_t,max_t,area,max_Lot):
-    #HoL from regression line
+def compute_critical_volume(A,B,CL,LT_P,Elev,Base,minV,min_t,max_t,area,sd):
+    #Critical volume from regression line
     Vmean=10**((np.log10(Elev/Base)-A)/B)
 
-    #HoL from lower bound 95% confidence interval
+    #Critical volume from lower bound 95% confidence interval
     V95=10**((np.log10(Elev/Base)-A+CL)/B)
 
     #setting volumes to minimum value if less than the minimum value
     if Vmean<minV:Vmean=minV
     if V95<minV:V95=minV
 
-    ct_ml=np.round(Vmean/area,1)
-    if ct_ml<0.1:ct_ml=0.1
-    ct_mx=np.round(V95/area,1)
-    if ct_mx<0.1:ct_mx=0.1
+    ct_ml=Vmean/area
+    ct_mx=V95/area
+    if ct_ml<0.1:ct_ml=0.1      #setting the absolute minimum thickness for the model
+    if ct_mx<0.1:ct_mx=0.1     #setting the absolute minimum thickness for the model
 
-    cA_ml=np.round(Vmean/max_t,1)
-    cA_mx=np.round(V95/max_t,1)
-    if cA_mx<10:cA_mx=10
-    if cA_ml<10:cA_ml=10
-
-   
+    cA_ml=Vmean/max_t
+    cA_mx=V95/max_t
+    if cA_mx<10:cA_mx=10      #setting the absolute minimum volume for the model
+    if cA_ml<10:cA_ml=10        #setting the absolute minimum volume for the model
 
 
-    print "\nCritical thickness (at constant area) to reach most likely runout= ",ct_ml," m"
-    print "Critical thickness (at constant area) to reach maximum runout= ",ct_mx," m\n"
+    print "     Critical landslide parameters to reach nearest exposure (at ",sig_digits(Base,sd),"m)\n"
 
-    print "Critical area (at maximum thickness) to reach most likely runout= ",cA_ml," m"
-    print "Critical area (at maximum thickness) to reach maximum runout= ",cA_mx," m\n"
+    print "         volume"
+    print "             mean landslide mobility:                    ",sig_digits(Vmean,sd)," m^3"
+    print "             extreme landslide mobility:                 ",sig_digits(V95,sd)," m^3\n"
+
+    print "         thickness (at constant area =",sig_digits(area,sd)," m^2)"
+    print "             mean landslide mobility:                    ",sig_digits(ct_ml,sd)," m"
+    print "             extreme landslide mobility:                 ",sig_digits(ct_mx,sd)," m\n"
+
+    print "         area (at maximum thickness=",sig_digits(max_t,sd)," m)"
+    print "             mean landslide mobility=                    ",sig_digits(cA_ml,sd)," m^2"
+    print "             extreme landslide mobility=                 ",sig_digits(cA_mx,sd)," m^2\n"
     
-    plt.figure(figsize=(6,4))
+    plt.figure(figsize=(6,5))
 
     t_ml=np.linspace(ct_ml,max_t,100)
     A_ml=Vmean/t_ml
@@ -79,32 +86,35 @@ def compute_critical_volume(A,B,CL,LT_P,Elev,Base,minV,min_t,max_t,area,max_Lot)
     A_mx=V95/t_mx
 
 
-
-    sA=np.linspace(1,max(A_ml),50)
-    
-    sV=sA**1.45
-    BsT_min=sA**0.3
-    BsT_max=sA**0.6
-    
-    SsT_min=sA**0.1
-    SsT_max=sA**0.4
-  
+##    # envelopes for soil- and bedrock failures
+##    sA=np.linspace(1,max(A_ml),50)
+##    sV=sA**1.45
+##    BsT_min=sA**0.3
+##    BsT_max=sA**0.6
+##    SsT_min=sA**0.1
+##    SsT_max=sA**0.4
+##    #####
     
     plt.title(LT_P+'\nCritical thickness and area for runout to exposure', fontsize='small')
-##    plt.plot([ct_ml,max_t],[area,cA_ml],'r-',label='most likely runout')
-##    plt.plot([ct_mx,max_t],[area,cA_mx],'r--',label='maximum runout')
-    plt.plot(t_ml,A_ml,'r-',label='most likely runout')
-    plt.plot(t_mx,A_mx,'r--',label='maximum runout')
-    plt.plot(BsT_min,sA,'g-',label='bedrock failures')
-    plt.plot(BsT_max,sA,'g-')
-    plt.plot(SsT_min,sA,'b-',label='soil failures')
-    plt.plot(SsT_max,sA,'b-')
+    plt.plot(t_ml,A_ml,'r-',label='mean mobility')
+    plt.plot(t_mx,A_mx,'r:',label='maximum mobility')
+##    plt.plot(BsT_min,sA,'g-',label='bedrock failures')
+##    plt.plot(BsT_max,sA,'g-')
+##    plt.plot(SsT_min,sA,'b-',label='soil failures')
+##    plt.plot(SsT_max,sA,'b-')
     
+    
+    plt.legend(fontsize='x-small',loc='lower right')
+    plt.loglog()
+    plt.xlim(plt.gca().get_xlim())
+    plt.ylim(plt.gca().get_ylim())
+    print plt.gca().get_xlim()
+    print plt.gca().get_ylim()
     plt.xlabel('thickness, $m$')
     plt.ylabel('area, $m^2$')
-    plt.loglog()
-    plt.legend(fontsize='x-small')
     
+    
+##    plt.axis((plt.gca().get_data_interval()))
     
     return Vmean, V95
     
@@ -188,14 +198,7 @@ def user_input():#USER INPUTS
             print "     Err: Input a positive number.\n"
             continue
 
-    while 1==1:
-        try:
-            s = raw_input("Input maximum length-to-thickness ratio of landslide: ")
-            max_Lot = float(s)
-            break
-        except:
-            print "     Err: Input a positive number.\n"
-            continue
+   
 
     while 1==1:
         try:
@@ -215,15 +218,32 @@ def user_input():#USER INPUTS
             print "     Err: Input a positive number.\n"
             continue
 
-    return ltp_id, minvolume, thickness , area, max_Lot, Elev, Base   
-    
-    
+    while 1==1:
+        try:
+            s = raw_input("Significant digits to report: ")
+            sd = int(s)
+            np.sqrt(sd)
+            break
+        except:
+            print "     Err: Input a positive value.\n"
+                
+            continue
+
+    return ltp_id, minvolume, thickness , area, Elev, Base, sd   
+
+
+def sig_digits(x,sd):
+    xsd=round(x, -int(floor(log10(x))) + (sd - 1))
+    if int(xsd)/int(10**(sd-1))!=0:
+        xsd=int(xsd)
+    return xsd
+        
 
     
 pd.options.display.show_dimensions=False    
 df=pd.read_csv('Corominas1996_table1.csv',header=0)
 print df[['Landslide_type','Path']],'\n\n'
-ltp_id, min_V,thickness , area, max_Lot,Elev, Base=user_input()
+ltp_id, min_V,thickness , area, Elev, Base,sd=user_input()
 min_t=min(thickness)
 max_t=max(thickness)
 
@@ -246,7 +266,6 @@ for i in ltp_id:
     #plotting runout profile for current landslide type - path
     #logHoL,logHoL_lb=compute_HoL(volume,A,B,CL)
     print '\n',Ls+' - '+Path
-    print '     nearest exposure:               ',str(int(round(Base)))+' m\n'
     
 
     #plotting runout profile for current landslide type - path
@@ -272,8 +291,8 @@ for i in ltp_id:
         meanL=Elev/10**logHoL[v_i]
         ax.add_patch(patches.Rectangle((0, 0), meanL, 0.2*Elev, fc='r',lw=0,label=('most likely extent (mean='+str(int(round(meanL)))+' $m$)')))
         plt.plot([0,meanL],[Elev,0], 'b-')
-        print '         most probable extent (mean):    '+str(int(round(meanL)))+' m'
-        print '         maximum extent (95%):           '+str(int(round(maxL)))+' m\n'
+        print '         most probable extent (mean):    '+str(sig_digits(meanL,sd))+' m'
+        print '         maximum extent (95%):           '+str(sig_digits(maxL,sd))+' m\n'
         
         
         #plotting scarp-exposure profile
@@ -295,7 +314,7 @@ for i in ltp_id:
     plt.subplots_adjust(top=0.9)
     fig2.suptitle(Ls+' - '+Path)
 
-    compute_critical_volume(A,B,CL,Ls+' - '+Path,Elev,Base,min_V,min_t,max_t,area,max_Lot)
+    compute_critical_volume(A,B,CL,Ls+' - '+Path,Elev,Base,min_V,min_t,max_t,area,sd)
     
    
 fig1.tight_layout()
