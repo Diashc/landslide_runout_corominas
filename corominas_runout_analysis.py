@@ -77,7 +77,8 @@ def compute_critical_volume(A,B,CL,LT_P,Elev,Base,minV,min_t,max_t,area,sd):
     print "             mean landslide mobility=                    ",sig_digits(cA_ml,sd)," m^2"
     print "             extreme landslide mobility=                 ",sig_digits(cA_mx,sd)," m^2\n"
     
-    plt.figure(figsize=(6,5))
+    fig=plt.figure(figsize=(6,5))
+    ax=fig.add_subplot(111)
 
     t_ml=np.linspace(ct_ml,max_t,100)
     A_ml=Vmean/t_ml
@@ -86,36 +87,28 @@ def compute_critical_volume(A,B,CL,LT_P,Elev,Base,minV,min_t,max_t,area,sd):
     A_mx=V95/t_mx
 
 
-##    # envelopes for soil- and bedrock failures
-##    sA=np.linspace(1,max(A_ml),50)
-##    sV=sA**1.45
-##    BsT_min=sA**0.3
-##    BsT_max=sA**0.6
-##    SsT_min=sA**0.1
-##    SsT_max=sA**0.4
-##    #####
     
-    plt.title(LT_P+'\nCritical thickness and area for runout to exposure', fontsize='small')
-    plt.plot(t_ml,A_ml,'r-',label='mean mobility')
-    plt.plot(t_mx,A_mx,'r:',label='maximum mobility')
-##    plt.plot(BsT_min,sA,'g-',label='bedrock failures')
-##    plt.plot(BsT_max,sA,'g-')
-##    plt.plot(SsT_min,sA,'b-',label='soil failures')
-##    plt.plot(SsT_max,sA,'b-')
+    ax.set_title(LT_P+'\nCritical thickness and area for runout to exposure')
+    ax.plot(t_ml,A_ml,'r-',lw=2,label='mean mobility, $V=$'+str(sig_digits(Vmean,sd))+" $m^3$")
+    ax.plot(t_mx,A_mx,'r:',lw=2,label='maximum mobility, $V=$'+str(sig_digits(V95,sd))+" $m^3$")
+
+
+    # envelopes for Volume-area scaling: V=A^s
+    sA=np.linspace(1,max(A_ml),10)
+    ax.plot(sA**0.1,sA,'b',label='$V=A^{1.1}$')
+    ax.plot(sA**0.3,sA,'y',label='$V=A^{1.3}$')
+    ax.plot(sA**0.6,sA,'m',label='$V=A^{1.6}$')
+
     
     
-    plt.legend(fontsize='x-small',loc='lower right')
-    plt.loglog()
-    plt.xlim(plt.gca().get_xlim())
-    plt.ylim(plt.gca().get_ylim())
-    print plt.gca().get_xlim()
-    print plt.gca().get_ylim()
-    plt.xlabel('thickness, $m$')
-    plt.ylabel('area, $m^2$')
-    
-    
-##    plt.axis((plt.gca().get_data_interval()))
-    
+    ax.legend(fontsize='x-small',loc='lower right')
+    ax.loglog()
+    ax.set_xlim(plt.gca().get_xlim())
+    ax.set_ylim(plt.gca().get_ylim())
+    ax.set_xlabel('thickness, $m$')
+    ax.set_ylabel('area, $m^2$')
+
+    fig.tight_layout()
     return Vmean, V95
     
 
